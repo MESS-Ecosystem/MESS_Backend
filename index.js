@@ -94,6 +94,15 @@ io.on('connection', (socket) => {
     });
     socket.on('send-message', (data) => {
         console.log(data);
+        if (data.IsSent){
+            data.isSent = data.IsSent
+            delete data.IsSent
+        }
+        // iOS may pass nil (null in swift) if users hasent provided username
+        // webclient and iOS side validation required to filter specifiv names, to not mess up on server side
+        if (data.displayName == 'nil') { 
+            data.displayName = 'iOS / iPadOS'
+        }
         socket.broadcast.emit('recieve-new-message', data);
     });
     socket.on('disconnect', (reas) => {
