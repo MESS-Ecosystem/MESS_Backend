@@ -2,10 +2,9 @@ const mongoose = require('mongoose')
 const express = require('express');
 const Router = express.Router();
 
-
-Router.get('/health', (req, res) => {
+let health = (req, res) => {
     try {
-
+        console.log('health!!')
         let connectionState = mongoose.connection.readyState;
         let state;
         // using manual switch instead of mongoose's mongoose.STATES[], assuming mroe efficiency
@@ -24,8 +23,10 @@ Router.get('/health', (req, res) => {
         console.log(error);
         return res.status(500).json('Internal Server Error');
     }
-})
+}
 
+Router.get('/health', health)
+Router.get('/', health)
 
 
 module.exports = Router;

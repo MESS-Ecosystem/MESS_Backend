@@ -8,16 +8,18 @@ const { instrument } = require('@socket.io/admin-ui')
 const socketServer = require('http').createServer(server);
 const messagesModel = require('./Model/messages.model');
 const { verify } = require('jsonwebtoken');
+const PORT = process.env.PORT || 8080;
 const io = socketio(socketServer, {
     cors: {
-        origin: ['http://localhost:3000', 'https://admin.socket.io', 'http://192.168.5.182:3000'],
+        // origin: ['http://localhost:3000', 'https://admin.socket.io', 'http://192.168.5.182:3000'],
+        origin: '*',
         methods: ["GET", "POST"],
-        credentials: true
+        // credentials: true
     }
 })
 server.use(cors({
     origin: '*',
-    credentials: true
+    // credentials: true
 }));
 
 instrument(io, {
@@ -37,6 +39,7 @@ server.use('/', require('./Routes/index.routes'))
 server.use('/auth', require('./Routes/auth.routes'))
 
 server.get('/dmusers', async (req, res) => {
+    console.log('dmusers request hit !')
     const sockets = await io.of('/DM').fetchSockets();
     const users = sockets.map(socket => ({
         id: socket.id,
@@ -180,7 +183,9 @@ io.of('/DM').on('connection', (socket) => {
 });
 
 
+process.on("uncaughtException", console.error)
+process.on("unhandledRejection", console.error)
 
-socketServer.listen(process.env.PORT, () => {
-    console.log(`listening on port ${process.env.PORT}`);
+socketServer.listen(PORT, "0.0.0.0",  () => {
+    console.log(`listening on port ${PORT}`);
 })
