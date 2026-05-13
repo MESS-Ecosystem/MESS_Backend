@@ -97,16 +97,25 @@ io.on('connection', (socket) => {
     });
     socket.on('send-message', (data) => {
         console.log(data);
-        if (data.IsSent){
-            data.isSent = data.IsSent
-            delete data.IsSent
+        let responseJSON = {
+            isSent: data.isSent || data.IsSent || false, // client (web and iOS) expects false as default value
+            displayName: data.displayName,
+            message: data.message,
+            uid: data.uid
         }
+        // if (data.IsSent){
+        //     data.isSent = data.IsSent
+        //     delete data.IsSent
+        // }
         // iOS may pass nil (null in swift) if users hasent provided username
         // webclient and iOS side validation required to filter specifiv names, to not mess up on server side
-        if (data.displayName == 'nil') { 
-            data.displayName = 'iOS / iPadOS'
+        if (responseJSON.displayName == 'nil') { 
+            responseJSON.displayName = 'iOS / iPadOS'
         }
-        socket.broadcast.emit('recieve-new-message', data);
+
+        console.log("final data: ", responseJSON);
+        
+        socket.broadcast.emit('recieve-new-message', responseJSON);
     });
     socket.on('disconnect', (reas) => {
         console.log(`disconnected to: ${socket.id} ${reas} `)
