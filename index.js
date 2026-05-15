@@ -46,9 +46,9 @@ server.get('/dmusers', async (req, res) => {
         userId: socket.handshake.auth || null,
         username: socket.handshake.auth.username || 'Anonymous'
     }));
-    
+
     // cause [] === [] returns false, so need to convert it to string and then compare
-    if(JSON.stringify(users) === '[]') return res.json(null);
+    if (JSON.stringify(users) === '[]') return res.json(null);
 
     return res.json(users);
 })
@@ -109,14 +109,19 @@ io.on('connection', (socket) => {
         // }
         // iOS may pass nil (null in swift) if users hasent provided username
         // webclient and iOS side validation required to filter specifiv names, to not mess up on server side
-        if (responseJSON.displayName == 'nil') { 
+        if (responseJSON.displayName == 'nil') {
             responseJSON.displayName = 'iOS / iPadOS'
         }
 
         console.log("final data: ", responseJSON);
-        
+
         socket.broadcast.emit('recieve-new-message', responseJSON);
     });
+
+    socket.on('am-typing', () => {
+        socket.broadcast.emit('is-typing', { id: socket.id, username: socket?.handshake?.auth?.username })
+    })
+
     socket.on('disconnect', (reas) => {
         console.log(`disconnected to: ${socket.id} ${reas} `)
         socket.broadcast.emit('user-left', { id: socket.id, platform: formatPlatform(socket?.handshake?.auth?.platformInfo), reason: reas });
@@ -189,12 +194,16 @@ io.of('/DM').on('connection', (socket) => {
             content: data.message,
         })
     });
+
+    socket.on('am-typing', () => {
+        socket.to(currentRoom).emit('is-typing', { id: socket.id, username: socket?.handshake?.auth?.username })
+    })
 });
 
 
 process.on("uncaughtException", console.error)
 process.on("unhandledRejection", console.error)
 
-socketServer.listen(PORT, "0.0.0.0",  () => {
+socketServer.listen(PORT, "0.0.0.0", () => {
     console.log(`listening on port ${PORT}`);
 })
