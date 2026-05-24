@@ -38,21 +38,8 @@ server.use(express.urlencoded());
 server.use(express.json());
 server.use('/', require('./Routes/index.routes'))
 server.use('/auth', require('./Routes/auth.routes'))
-
-server.get('/dmusers', async (req, res) => {
-    const sockets = await io.of('/DM').fetchSockets();
-    const users = sockets.map(socket => ({
-        id: socket.id,
-        userId: socket.handshake.auth || null,
-        username: socket.handshake.auth.username || 'Anonymous'
-    }));
-
-    // cause [] === [] returns false, so need to convert it to string and then compare
-    if (JSON.stringify(users) === '[]') return res.json(null);
-
-    return res.json(users);
-})
-
+server.use('/chat', require('./Routes/chat.routes'))
+server.use('/account', require('./Routes/account.routes'))
 
 
 // the same thing that is being used at frontend (web)
@@ -76,7 +63,7 @@ io.use((socket, next) => {
 
         let token = socket?.handshake?.auth?.token
         socket.user = verify(token, process.env.JWT_SECRET);
-        console.log('authorized user:', socket.user)
+        console.log('DEV: authorized user:', socket.user)
         next();
     } catch (error) {
         console.log(error.message);
@@ -84,21 +71,15 @@ io.use((socket, next) => {
     }
 })
 
-// keeping the socket connection on root server file for reducing the jumping in files
-// and increasing efficiency on a smaller scale 
 io.on('connection', (socket) => {
-    console.log('connected with: ', socket.id, socket.handshake.auth);
+    console.log('DEV: connected with: ', socket.id, socket.user);
     socket.broadcast.emit('user-connected', {
         id: socket.id,
         platform: formatPlatform(socket?.handshake?.auth?.platformInfo),
-        username: socket?.handshake?.auth?.username,
+        username: socket.user.username,
         displayName: socket?.handshake?.auth?.displayName,
     });
-    socket.on('send-devinfo', (data) => {
-        console.log(data);
-    });
     socket.on('send-message', (data) => {
-        // console.log(data);
         let responseJSON = {
             isSent: data.isSent || data.IsSent || false, // client (web and iOS) expects false as default value
             displayName: data.displayName,
@@ -111,87 +92,110 @@ io.on('connection', (socket) => {
             responseJSON.displayName = 'iOS / iPadOS'
         }
 
-        console.log(responseJSON);
+        console.log('DEV: ', responseJSON);
 
         socket.broadcast.emit('recieve-new-message', responseJSON);
     });
 
     socket.on('am-typing', () => {
-        socket.broadcast.emit('is-typing', { id: socket.id, username: socket?.handshake?.auth?.username })
+        socket.broadcast.emit('is-typing',
+            {
+                id: socket.id,
+                username: socket.user.username
+            })
     })
 
     socket.on('disconnect', (reas) => {
-        console.log(`disconnected to: ${socket.id} ${reas} `)
-        socket.broadcast.emit('user-left', { id: socket.id, platform: formatPlatform(socket?.handshake?.auth?.platformInfo), reason: reas });
+        console.log(`DEV: disconnected to: ${socket.id} ${reas} `)
+        socket.broadcast.emit('user-left',
+            {
+                id: socket.id,
+                platform: formatPlatform(socket?.handshake?.auth?.platformInfo),
+                reason: reas
+            });
     })
-    // socket.on()
 });
 
-
-// io.of('/DM').on('connection', (socket) => {
-//     console.log(` ${socket.handshake.auth.username} connected to DM`)
-//     socket.broadcast.emit('userconnected', { username: socket.handshake.auth.username })
-//     socket.on('connectToRoom', ({ room, username }) => {
-//         if (typeof room == 'string') {
-//             socket.join(room)
-//             socket.emit('currentroom', { room: room }) // to check on frontend
-//         }
-//         else
-//             console.log(typeof room);
-
-//         socket.on('send-message', (data) => {
-//             socket.to(room).emit('recieve-new-message', data);
-//         });
-
-//     })
-// })
-
-// YEAH, i know that was a dumb mistake
 io.of('/DM').on('connection', (socket) => {
-    console.log(`DM: ${socket.handshake.auth.username} connected`);
+    console.log(`DEV: DM: ${socket.user.username} connected`);
+
+    // will be used for notifications, and presence detection
+    socket.connect(`user:${socket.user.username}`)
 
     socket.broadcast.emit('userconnected', {
-        username: socket.handshake.auth.username
+        username: socket.user.username
     });
 
-    let currentRoom = null; // track active room
 
-    socket.on('connectToRoom', ({ room }) => {
-        if (typeof room === 'string') {
-
-            // leave previous room/chat if exists
-            if (currentRoom)
-                socket.leave(currentRoom);
-            socket.join(room);
-            currentRoom = room;
-
-            socket.emit('currentroom', { room });
+    let chattingWith = null
+    let roomID = null
+    socket.on('chatwith', ({ username }) => {
+        if (typeof username == 'string') {
+            if (chattingWith) {
+                socket.leave(chattingWith.roomID)
+                chattingWith = null;
+            }
+            roomID = `dm:${[socket.user.username, username].sort().join(':')}`
+            console.log('DEV: ', roomID)
+            socket.join('DEV: ',roomID);
+            chattingWith = {
+                username, // the other user
+                roomID
+            }
         }
-    });
+
+    })
+
+
+    // MARK: NOT DEPENDENT ON CLIENTS ANYMORE
+    // let currentRoom = null; // track active room
+    // socket.on('connectToRoom', ({ room }) => {
+    //     if (typeof room === 'string') {
+
+    //         // leave previous room/chat if exists
+    //         if (currentRoom)
+    //             socket.leave(currentRoom);
+    //         socket.join(room);
+    //         currentRoom = room;
+
+    //         socket.emit('currentroom', { room });
+    //     }
+    // });
     socket.on('get-all-messages', async () => {
-        if (!currentRoom)
-            socket.to(currentRoom).emit('get-all-messages', [])
+        if (!roomID)
+            socket.to(roomID).emit('get-all-messages', [])
 
         // will add pagination later (get messages as user scrolls up)
-        let messages = await messagesModel.find({ chatId: currentRoom }).sort({ createdAt: 1 }).limit(50)
+        let messages = await messagesModel
+            .find({ chatId: roomID })
+            .sort({ createdAt: 1 })
+            .limit(50)
         socket.emit('get-all-messages', messages)
     })
 
 
     socket.on('send-message', async (data) => {
-        if (!currentRoom)
+        if (!roomID)
             return;
 
-        socket.to(currentRoom).emit('recieve-new-message', data);
+
+        // planning to send the notification on user specific room, if not connected to DM room 
+        const users = io.of('/DM').adapter.rooms.get(roomID)
+        console.log('DEV: ', users); 
+        const isPresent = users ? users.size : false
+        console.log('DEV: isPresent: ', isPresent)
+
+
+        socket.to(roomID).emit('recieve-new-message', data);
         await messagesModel.create({
-            chatId: currentRoom,
-            senderId: socket.handshake.auth.username,
+            chatId: roomID,
+            senderId: socket.user.username,
             content: data.message,
         })
     });
 
     socket.on('am-typing', () => {
-        socket.to(currentRoom).emit('is-typing', { id: socket.id, username: socket?.handshake?.auth?.username })
+        socket.to(roomID).emit('is-typing', { id: socket.id, username: socket.user.username })
     })
 });
 
@@ -200,5 +204,5 @@ process.on("uncaughtException", console.error)
 process.on("unhandledRejection", console.error)
 
 socketServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`listening on port ${PORT}`);
+    console.log(`DEV: console.loglistening on port ${PORT}`);
 })

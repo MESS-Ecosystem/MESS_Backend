@@ -4,7 +4,7 @@ const Router = express.Router();
 
 let health = (req, res) => {
     try {
-        console.log('health!!')
+        console.log('DEV: PINGED')
         let connectionState = mongoose.connection.readyState;
         let state;
         // using manual switch instead of mongoose's mongoose.STATES[], assuming mroe efficiency
@@ -20,7 +20,7 @@ let health = (req, res) => {
             databaseState: state
         })
     } catch (error) {
-        console.log(error);
+        console.error(error);
         return res.status(500).json('Internal Server Error');
     }
 }

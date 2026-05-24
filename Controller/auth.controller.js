@@ -29,6 +29,7 @@ exports.addUser = async (req, res) => {
         } else return res.status(400).json('Insufficient Data') // 400 = bad request
 
     } catch (error) {
+        console.error(error)
         return res.status(500).json('Internal Server Error')
     }
 }
@@ -36,7 +37,7 @@ exports.login = async (req, res) => {
     try {
 
         let { username, email, password } = req.body;
-        if (username && password) {
+        if (username.length >= 8 && password.length >= 8) {
             // let user = await userModel.findOne({ username: username }).select('-createdAt -updatedAt -__v -_id -email')
             let user = await userModel.findOne({ username: username }).select('username password _id')
             if (!user) return res.status(401).json('Invalid Credentials');
@@ -46,7 +47,7 @@ exports.login = async (req, res) => {
                 let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' })
                 return res.json({ token: jwttoken });
             }
-        } else if (email && password) {
+        } else if (email && password.length >= 8) {
             let user = await userModel.findOne({ email: email }).select('email password username _id')
             if (!user) return res.status(401).json('Invalid Credentials');
             let isValid = await bcrypt.compare(user?.password, password);
@@ -57,7 +58,7 @@ exports.login = async (req, res) => {
             }
         } else return res.status(401).json('Invalid Credentials');
     } catch (error) {
-        console.log(error);
+        console.error(error);
         return res.status(500).json('Internal Server Error');
     }
 }
@@ -76,7 +77,7 @@ exports.verify = async (req, res) => {
             else return res.status(401).json('Unauthorized')
         }
     } catch (error) {
-        console.log(error)
+        console.error(error)
         return res.status(401).json('Unauthorized')
     }
 }
