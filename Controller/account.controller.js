@@ -1,4 +1,5 @@
 const userModel = require("../Model/user.model")
+const cloudinary = require('../Utils/cloudinary')
 
 exports.getAccountInfo = (req, res) => {
     try {
@@ -20,5 +21,33 @@ exports.getAccountInfo = (req, res) => {
     } catch (error) {
         console.error(error)
         return res.status(500).json('Internal Server Error');
+    }
+}
+
+exports.addProfile = async (req, res) => {
+    try {
+        console.log("DEV: ", req.file)
+        cloudinary.uploader.upload(req.file.path, async function (err, result) {
+            if (err) {
+                console.error(err)
+                return res.status(500).json({
+                    success: false,
+                    message: "Error"
+                })
+            }
+            res.json({
+                success: true,
+                message: "Uploaded",
+                data: result
+            })
+            const objectId = req.token._id
+            // console.log(objectId)
+            let dbres = await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url }, { new: true })
+            console.log(dbres)
+            return;
+        })
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json("Internal Server Error")
     }
 }

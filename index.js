@@ -10,6 +10,7 @@ const socketServer = require('http').createServer(server);
 const messagesModel = require('./Model/messages.model');
 const { verify } = require('jsonwebtoken');
 const PORT = process.env.PORT || 8080;
+const cloudinary = require('cloudinary')
 const io = socketio(socketServer, {
     cors: {
         // origin: ['http://localhost:3000', 'https://admin.socket.io', 'http://192.168.5.182:3000'],
@@ -36,10 +37,10 @@ database();
 
 server.use(express.urlencoded());
 server.use(express.json());
-server.use('/', require('./Routes/index.routes'))
 server.use('/auth', require('./Routes/auth.routes'))
 server.use('/chat', require('./Routes/chat.routes'))
 server.use('/account', require('./Routes/account.routes'))
+server.use('/', require('./Routes/index.routes'))
 
 
 // the same thing that is being used at frontend (web)
@@ -74,10 +75,10 @@ io.use((socket, next) => {
 io.on('connection', (socket) => {
     console.log('DEV: connected with: ', socket.id, socket.user);
     socket.broadcast.emit('user-connected', {
-        id: socket.id,
         platform: formatPlatform(socket?.handshake?.auth?.platformInfo),
         username: socket.user.username,
         displayName: socket?.handshake?.auth?.displayName,
+        profile: socket.user?.profile
     });
     socket.on('send-message', (data) => {
         let responseJSON = {
@@ -204,5 +205,5 @@ process.on("uncaughtException", console.error)
 process.on("unhandledRejection", console.error)
 
 socketServer.listen(PORT, "0.0.0.0", () => {
-    console.log(`DEV: console.loglistening on port ${PORT}`);
+    console.log(`DEV: listening on port ${PORT}`);
 })

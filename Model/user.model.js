@@ -17,6 +17,10 @@ const userSchema = mongoose.Schema({
     email: {
         type: String,
         required: true,
+    },
+    profile: {
+        type: String,
+        required: false,
     }
 }, {
     timestamps: true

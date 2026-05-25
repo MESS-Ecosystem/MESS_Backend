@@ -8,10 +8,10 @@ exports.addUser = async (req, res) => {
         if (username && password && email) {
             if (displayName === undefined || null) displayName = username
             // console.log('STATUS: hashing password !!!!') 
-            // password hashing takes about 2.7 - 2.8 seconds
+            // password hashing takes about 2.7 - 2.8 seconds on 16Salt Rounds
             // calculated by log timestams in terminal, 
             // (tested on linux system, on 4.2GHz single thread operation) 
-            password = await bcrypt.hash(password, 16)
+            password = await bcrypt.hash(password, 8)
             // console.log('STATUS: hashed password !!!!')
 
             // providing info too early to make the response time faster for frontend,
