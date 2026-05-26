@@ -8,7 +8,7 @@ const socketio = require('socket.io');
 const { instrument } = require('@socket.io/admin-ui')
 const socketServer = require('http').createServer(server);
 const messagesModel = require('./Model/messages.model');
-const { verify } = require('jsonwebtoken');
+const { verify, decode } = require('jsonwebtoken');
 const PORT = process.env.PORT || 8080;
 const cloudinary = require('cloudinary')
 const io = socketio(socketServer, {
@@ -38,7 +38,7 @@ database();
 server.use(express.urlencoded());
 server.use(express.json());
 server.use('/auth', require('./Routes/auth.routes'))
-server.use('/chat', require('./Routes/chat.routes'))
+server.use('/user', require('./Routes/chat.routes'))
 server.use('/account', require('./Routes/account.routes'))
 server.use('/', require('./Routes/index.routes'))
 
@@ -63,7 +63,27 @@ io.use((socket, next) => {
         //     return next(new Error("Unauthorized"));
 
         let token = socket?.handshake?.auth?.token
-        socket.user = verify(token, process.env.JWT_SECRET);
+        verify(token, process.env.JWT_SECRET);
+        socket.user = decode(token)
+        console.log('DEV: authorized user:', socket.user)
+        next();
+    } catch (error) {
+        console.log(error.message);
+        return next(new Error("Unauthorized"));
+    }
+})
+
+io.of('/DM').use((socket, next) => {
+    try {
+        // const rawCookies = socket.handshake.headers.cookie
+        // const cookies = cookie.parse(rawCookies || '');
+        // console.log('cookie: ', cookies);
+        // if (!cookies.token)
+        //     return next(new Error("Unauthorized"));
+
+        let token = socket?.handshake?.auth?.token
+        verify(token, process.env.JWT_SECRET);
+        socket.user = decode(token)
         console.log('DEV: authorized user:', socket.user)
         next();
     } catch (error) {
@@ -81,6 +101,9 @@ io.on('connection', (socket) => {
         profile: socket.user?.profile
     });
     socket.on('send-message', (data) => {
+        if (typeof data === 'string') {
+            data = JSON.parse(data)
+        }
         let responseJSON = {
             isSent: data.isSent || data.IsSent || false, // client (web and iOS) expects false as default value
             displayName: data.displayName,
@@ -118,10 +141,11 @@ io.on('connection', (socket) => {
 });
 
 io.of('/DM').on('connection', (socket) => {
+    console.log(socket.user)
     console.log(`DEV: DM: ${socket.user.username} connected`);
 
     // will be used for notifications, and presence detection
-    socket.connect(`user:${socket.user.username}`)
+    socket.join(`user:${socket.user.username}`)
 
     socket.broadcast.emit('userconnected', {
         username: socket.user.username
@@ -130,38 +154,41 @@ io.of('/DM').on('connection', (socket) => {
 
     let chattingWith = null
     let roomID = null
-    socket.on('chatwith', ({ username }) => {
-        if (typeof username == 'string') {
+    socket.on('chatwith', (data) => {
+        if (typeof data == 'string') {
+            data = JSON.parse(data)
+        }
+        if (typeof data.username == 'string') {
             if (chattingWith) {
                 socket.leave(chattingWith.roomID)
                 chattingWith = null;
             }
-            roomID = `dm:${[socket.user.username, username].sort().join(':')}`
-            console.log('DEV: ', roomID)
-            socket.join('DEV: ',roomID);
+            roomID = `dm:${[socket.user.username, data.username].sort().join(':')}`
+            console.log('DEV: roomID: ', roomID)
+            socket.join(roomID);
             chattingWith = {
-                username, // the other user
+                username: data.username, // the other user
                 roomID
             }
-        }
+        } else console.log(`DEV: WARN: username is not string ${typeof data.username} ${data.username} ${typeof data} ${data}`)
 
     })
 
+    socket.on('closedChat', (data) => {
+        if (typeof data === 'string') {
+            data = JSON.parse(data)
+        }
+        if (typeof data.username == 'string') {
+            let recievedRoomID = `dm:${[socket.user.username, data.username].sort().join(':')}`
+            if (recievedRoomID === chattingWith) socket.leave(recievedRoomID)
+            else {
+                socket.leave(recievedRoomID)
+                socket.leave(chattingWith)
+            }
+        }
+    })
 
     // MARK: NOT DEPENDENT ON CLIENTS ANYMORE
-    // let currentRoom = null; // track active room
-    // socket.on('connectToRoom', ({ room }) => {
-    //     if (typeof room === 'string') {
-
-    //         // leave previous room/chat if exists
-    //         if (currentRoom)
-    //             socket.leave(currentRoom);
-    //         socket.join(room);
-    //         currentRoom = room;
-
-    //         socket.emit('currentroom', { room });
-    //     }
-    // });
     socket.on('get-all-messages', async () => {
         if (!roomID)
             socket.to(roomID).emit('get-all-messages', [])
@@ -176,18 +203,22 @@ io.of('/DM').on('connection', (socket) => {
 
 
     socket.on('send-message', async (data) => {
+        console.log('DEV: sending message', roomID, chattingWith, data)
         if (!roomID)
             return;
-
-
+        if (typeof data === 'string') {
+            data = JSON.parse(data)
+        }
         // planning to send the notification on user specific room, if not connected to DM room 
         const users = io.of('/DM').adapter.rooms.get(roomID)
-        console.log('DEV: ', users); 
+        console.log('DEV: ', users);
         const isPresent = users ? users.size : false
         console.log('DEV: isPresent: ', isPresent)
 
-
-        socket.to(roomID).emit('recieve-new-message', data);
+        if (isPresent === false || isPresent == 1 || isPresent == 0) {
+            socket.to(`user:${chattingWith.username}`).emit('dm-notification', { data, roomID })
+        } else
+            socket.to(roomID).emit('recieve-new-message', { data, roomID });
         await messagesModel.create({
             chatId: roomID,
             senderId: socket.user.username,

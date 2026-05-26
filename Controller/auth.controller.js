@@ -4,9 +4,11 @@ const jwt = require('jsonwebtoken')
 const bcrypt = require('bcrypt')
 exports.addUser = async (req, res) => {
     try {
-        let { username, password, email, displayName } = req.body;
+        let { username, password, email, displayName, phone } = req.body;
         if (username && password && email) {
+            username = username.trim().replaceAll(' ', '') // removing all spaces
             if (displayName === undefined || null) displayName = username
+            if (phone == undefined) phone = null
             // console.log('STATUS: hashing password !!!!') 
             // password hashing takes about 2.7 - 2.8 seconds on 16Salt Rounds
             // calculated by log timestams in terminal, 
@@ -17,12 +19,17 @@ exports.addUser = async (req, res) => {
             // providing info too early to make the response time faster for frontend,
             // connectionstate = 1 == connected, just to make sure data will reach to database
             if (username && password && email && displayName && mongoose.connection.readyState == 1) res.status(201).json('user added successfully')
+            //for searching
+            let usernameLower = username.toString().toLowerCase()
             let userInfo = {
+                phone,
                 username,
+                usernameLower,
                 displayName,
                 email, // hoping validation is done at frontend, will at here later
                 password
             }
+            console.log("DEV: ", userInfo)
             await userModel.create(userInfo)
             // console.log('data added in database, returning')
             return // to avoid potential overloading (or memory leak, if users expand), by ending running instance of req,res cycle
@@ -39,7 +46,9 @@ exports.login = async (req, res) => {
         let { username, email, password } = req.body;
         if (username.length >= 8 && password.length >= 8) {
             // let user = await userModel.findOne({ username: username }).select('-createdAt -updatedAt -__v -_id -email')
-            let user = await userModel.findOne({ username: username }).select('username password _id')
+            username = username.trim().replaceAll(' ', '')
+            let usernameLower = username.toString().toLowerCase()
+            let user = await userModel.findOne({ usernameLower: usernameLower }).select('username password _id')
             if (!user) return res.status(401).json('Invalid Credentials');
             let isValid = await bcrypt.compare(password, user?.password);
             if (!isValid) return res.status(401).json('Invalid Credentials');

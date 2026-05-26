@@ -6,6 +6,10 @@ const userSchema = mongoose.Schema({
         type: String,
         required: true,
     },
+    usernameLower: { // for singlecase searching == less stress on DB
+        type: String,
+        required: true,
+    },
     password: {
         type: String,
         required: true,
@@ -21,6 +25,10 @@ const userSchema = mongoose.Schema({
     profile: {
         type: String,
         required: false,
+    },
+    phone: {
+        type: Number,
+        required: false, 
     }
 }, {
     timestamps: true
