@@ -82,6 +82,7 @@ io.of('/DM').use((socket, next) => {
         //     return next(new Error("Unauthorized"));
 
         let token = socket?.handshake?.auth?.token
+        console.log(token)
         verify(token, process.env.JWT_SECRET);
         socket.user = decode(token)
         console.log('DEV: authorized user:', socket.user)
@@ -159,15 +160,16 @@ io.of('/DM').on('connection', (socket) => {
             data = JSON.parse(data)
         }
         if (typeof data.username == 'string') {
+            const username = data.username.toString().toLowerCase()
             if (chattingWith) {
                 socket.leave(chattingWith.roomID)
                 chattingWith = null;
             }
-            roomID = `dm:${[socket.user.username, data.username].sort().join(':')}`
+            roomID = `dm:${[socket.user.username, username].sort().join(':')}`
             console.log('DEV: roomID: ', roomID)
             socket.join(roomID);
             chattingWith = {
-                username: data.username, // the other user
+                username: username, // the other user
                 roomID
             }
         } else console.log(`DEV: WARN: username is not string ${typeof data.username} ${data.username} ${typeof data} ${data}`)
@@ -203,7 +205,7 @@ io.of('/DM').on('connection', (socket) => {
 
 
     socket.on('send-message', async (data) => {
-        console.log('DEV: sending message', roomID, chattingWith, data)
+        console.log('DEV: sending message', roomID, data)
         if (!roomID)
             return;
         if (typeof data === 'string') {
@@ -211,12 +213,16 @@ io.of('/DM').on('connection', (socket) => {
         }
         // planning to send the notification on user specific room, if not connected to DM room 
         const users = io.of('/DM').adapter.rooms.get(roomID)
-        console.log('DEV: ', users);
+        // console.log('DEV: ', users);
         const isPresent = users ? users.size : false
         console.log('DEV: isPresent: ', isPresent)
 
         if (isPresent === false || isPresent == 1 || isPresent == 0) {
-            socket.to(`user:${chattingWith.username}`).emit('dm-notification', { data, roomID })
+            const time = new Date().toLocaleTimeString('en-GB', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            socket.to(`user:${chattingWith.username}`).emit('dm-notification', { data: { ...data, username: socket.user.username,  timeStamp: time }, roomID })
         } else
             socket.to(roomID).emit('recieve-new-message', { data, roomID });
         await messagesModel.create({
