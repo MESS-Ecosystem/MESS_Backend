@@ -48,21 +48,21 @@ exports.login = async (req, res) => {
             // let user = await userModel.findOne({ username: username }).select('-createdAt -updatedAt -__v -_id -email')
             username = username.trim().replaceAll(' ', '')
             let usernameLower = username.toString().toLowerCase()
-            let user = await userModel.findOne({ usernameLower: usernameLower }).select('username password _id')
+            let user = await userModel.findOne({ usernameLower: usernameLower }).select('email username displayName password _id profile')
             if (!user) return res.status(401).json('Invalid Credentials');
             let isValid = await bcrypt.compare(password, user?.password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' })
+                let jwttoken = jwt.sign({ username, _id: user._id, profile: user?.profile }, process.env.JWT_SECRET, { expiresIn: '1d' })
                 return res.json({ token: jwttoken });
             }
         } else if (email && password.length >= 8) {
-            let user = await userModel.findOne({ email: email }).select('email password username _id')
+            let user = await userModel.findOne({ email: email }).select('email username displayName password _id profile')
             if (!user) return res.status(401).json('Invalid Credentials');
             let isValid = await bcrypt.compare(user?.password, password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id }, process.env.JWT_SECRET, { expiresIn: '1d' })
+                let jwttoken = jwt.sign({ username, _id: user._id, profile: user?.profile }, process.env.JWT_SECRET, { expiresIn: '1d' })
                 return res.json({ token: jwttoken });
             }
         } else return res.status(401).json('Invalid Credentials');

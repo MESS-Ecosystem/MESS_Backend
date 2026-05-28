@@ -35,8 +35,8 @@ instrument(io, {
 
 database();
 
-server.use(express.urlencoded());
-server.use(express.json());
+server.use(express.urlencoded({ limit: '10mb' }));
+server.use(express.json({ limit: '10mb' }));
 server.use('/auth', require('./Routes/auth.routes'))
 server.use('/user', require('./Routes/chat.routes'))
 server.use('/account', require('./Routes/account.routes'))
@@ -222,12 +222,13 @@ io.of('/DM').on('connection', (socket) => {
                 hour: '2-digit',
                 minute: '2-digit'
             });
-            socket.to(`user:${chattingWith.username}`).emit('dm-notification', { data: { ...data, username: socket.user.username,  timeStamp: time }, roomID })
+            socket.to(`user:${chattingWith.username}`).emit('dm-notification', { data: { ...data, username: socket.user.username, timeStamp: time }, roomID })
         } else
             socket.to(roomID).emit('recieve-new-message', { data, roomID });
         await messagesModel.create({
             chatId: roomID,
-            senderId: socket.user.username,
+            senderName: socket.user.username,
+            senderId: socket.user._id,
             content: data.message,
         })
     });
