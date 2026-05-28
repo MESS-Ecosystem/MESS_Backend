@@ -121,7 +121,7 @@ exports.editProfile = async (req, res) => {
                         message: "Error"
                     })
                 }
-                // await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url })
+                await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url })
                 return res.json({
                     success: true,
                     message: "Uploaded",
@@ -175,7 +175,7 @@ exports.editProfile = async (req, res) => {
                         message: "Error"
                     })
                 }
-                // await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url })
+                await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url })
                 return res.json({
                     success: true,
                     message: "Uploaded",
