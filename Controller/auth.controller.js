@@ -53,7 +53,7 @@ exports.login = async (req, res) => {
             let isValid = await bcrypt.compare(password, user?.password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id, profile: user?.profile }, process.env.JWT_SECRET, { expiresIn: '1d' })
+                let jwttoken = jwt.sign({ username, displayName: user.displayName, _id: user._id, email: user.email, profile: user?.profile }, process.env.JWT_SECRET, { expiresIn: '1d' })
                 return res.json({ token: jwttoken });
             }
         } else if (email && password.length >= 8) {
@@ -62,7 +62,7 @@ exports.login = async (req, res) => {
             let isValid = await bcrypt.compare(user?.password, password);
             if (!isValid) return res.status(401).json('Invalid Credentials');
             if (isValid === true) {
-                let jwttoken = jwt.sign({ username, _id: user._id, profile: user?.profile }, process.env.JWT_SECRET, { expiresIn: '1d' })
+                let jwttoken = jwt.sign({ username: user.username, displayName: user.displayName, email, _id: user._id, profile: user?.profile }, process.env.JWT_SECRET, { expiresIn: '1d' })
                 return res.json({ token: jwttoken });
             }
         } else return res.status(401).json('Invalid Credentials');
@@ -88,5 +88,24 @@ exports.verify = async (req, res) => {
     } catch (error) {
         console.error(error)
         return res.status(401).json('Unauthorized')
+    }
+}
+exports.refreshToken = async (req, res) => {
+    try {
+        const currentToken = req.token
+        let user = await userModel.findById(req.token._id).select('username displayName phone email _id profile')
+        let newToken = jwt.sign({
+            username: user.username,
+            displayName: user?.displayName,
+            phone: user.phone,
+            email: user.email,
+            _id: user._id,
+            profile: user?.profile
+        }, process.env.JWT_SECRET, { expiresIn: '1d' })
+
+        return res.json({ token: newToken })
+    } catch (error) {
+        console.error(error)
+        return res.status(500).json("Internal Server Error")
     }
 }

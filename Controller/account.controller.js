@@ -24,25 +24,47 @@ exports.getAccountInfo = async (req, res) => {
 exports.addProfile = async (req, res) => {
     try {
         console.log("DEV: ", req.file)
-        cloudinary.uploader.upload(req.file.path, async function (err, result) {
-            if (err) {
-                console.error(err)
-                return res.status(500).json({
-                    success: false,
-                    message: "Error"
+        if (req?.file) {
+            cloudinary.uploader.upload(req.file.path, async function (err, result) {
+                if (err) {
+                    console.error(err)
+                    return res.status(500).json({
+                        success: false,
+                        message: "Error"
+                    })
+                }
+                res.json({
+                    success: true,
+                    message: "Uploaded",
+                    data: result
                 })
-            }
-            res.json({
-                success: true,
-                message: "Uploaded",
-                data: result
+                const objectId = req.token._id
+                // console.log(objectId)
+                let dbres = await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url }, { new: true })
+                console.log(dbres)
+                return;
             })
-            const objectId = req.token._id
-            // console.log(objectId)
-            let dbres = await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url }, { new: true })
-            console.log(dbres)
-            return;
-        })
+        } else if (req?.body?.profile) {
+            cloudinary.uploader.upload(req.body.profile, async function (err, result) {
+                if (err) {
+                    console.error(err)
+                    return res.status(500).json({
+                        success: false,
+                        message: "Error"
+                    })
+                }
+                res.json({
+                    success: true,
+                    message: "Uploaded",
+                    data: result
+                })
+                const objectId = req.token._id
+                // console.log(objectId)
+                let dbres = await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url }, { new: true })
+                console.log(dbres)
+                return;
+            })
+        }
     } catch (error) {
         console.error(error)
         return res.status(500).json("Internal Server Error")
