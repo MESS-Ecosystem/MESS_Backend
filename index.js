@@ -85,6 +85,8 @@ io.of('/DM').use((socket, next) => {
         console.log(token)
         verify(token, process.env.JWT_SECRET);
         socket.user = decode(token)
+        let usernameLower = socket.user.username.toString().toLowerCase()
+        socket.user.username = usernameLower
         console.log('DEV: authorized user:', socket.user)
         next();
     } catch (error) {
@@ -142,15 +144,15 @@ io.on('connection', (socket) => {
 });
 
 io.of('/DM').on('connection', (socket) => {
-    console.log(socket.user)
+    // console.log(socket.user)
     console.log(`DEV: DM: ${socket.user.username} connected`);
 
     // will be used for notifications, and presence detection
-    socket.join(`user:${socket.user.username}`)
+    socket.join(`user:${socket.user.username.toString().toLowerCase()}`)
 
-    socket.broadcast.emit('userconnected', {
-        username: socket.user.username
-    });
+    // socket.broadcast.emit('userconnected', {
+    //     username: socket.user.username
+    // });
 
 
     let chattingWith = null
@@ -165,7 +167,7 @@ io.of('/DM').on('connection', (socket) => {
                 socket.leave(chattingWith.roomID)
                 chattingWith = null;
             }
-            roomID = `dm:${[socket.user.username, username].sort().join(':')}`
+            roomID = `dm:${[socket.user.username, username.toString().toLowerCase()].sort().join(':')}`
             console.log('DEV: roomID: ', roomID)
             socket.join(roomID);
             chattingWith = {
@@ -196,10 +198,16 @@ io.of('/DM').on('connection', (socket) => {
             socket.to(roomID).emit('get-all-messages', [])
 
         // will add pagination later (get messages as user scrolls up)
-        let messages = await messagesModel
-            .find({ chatId: roomID })
-            .sort({ createdAt: 1 })
-            .limit(50)
+        // let messages = await messagesModel
+        //     .find({ chatId: roomID })
+        //     .sort({ updatedAt: -1 })
+        //     .limit(50)
+        let messages = await messagesModel.aggregate([
+            { $match: { chatId: roomID } },
+            { $sort: { createdAt: -1 } },
+            { $limit: 50 }, { $sort: { createdAt: 1 } }
+        ])
+
         socket.emit('get-all-messages', messages)
     })
 
