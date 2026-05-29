@@ -65,10 +65,10 @@ io.use((socket, next) => {
         let token = socket?.handshake?.auth?.token
         verify(token, process.env.JWT_SECRET);
         socket.user = decode(token)
-        console.log('DEV: authorized user:', socket.user)
+        // console.log('DEV: authorized user:', socket.user)
         next();
     } catch (error) {
-        console.log(error.message);
+        console.error(error.message);
         return next(new Error("Unauthorized"));
     }
 })
@@ -82,21 +82,21 @@ io.of('/DM').use((socket, next) => {
         //     return next(new Error("Unauthorized"));
 
         let token = socket?.handshake?.auth?.token
-        console.log(token)
+        // console.log(token)
         verify(token, process.env.JWT_SECRET);
         socket.user = decode(token)
         let usernameLower = socket.user.username.toString().toLowerCase()
         socket.user.username = usernameLower
-        console.log('DEV: authorized user:', socket.user)
+        // console.log('DEV: authorized user:', socket.user)
         next();
     } catch (error) {
-        console.log(error.message);
+        console.error(error.message);
         return next(new Error("Unauthorized"));
     }
 })
 
 io.on('connection', (socket) => {
-    console.log('DEV: connected with: ', socket.id, socket.user);
+    // console.log('DEV: connected with: ', socket.id, socket.user);
     socket.broadcast.emit('user-connected', {
         platform: formatPlatform(socket?.handshake?.auth?.platformInfo),
         username: socket.user.username,
@@ -119,7 +119,7 @@ io.on('connection', (socket) => {
             responseJSON.displayName = 'iOS / iPadOS'
         }
 
-        console.log('DEV: ', responseJSON);
+        // console.log('DEV: ', responseJSON);
 
         socket.broadcast.emit('recieve-new-message', responseJSON);
     });
@@ -133,7 +133,7 @@ io.on('connection', (socket) => {
     })
 
     socket.on('disconnect', (reas) => {
-        console.log(`DEV: disconnected to: ${socket.id} ${reas} `)
+        // console.log(`DEV: disconnected to: ${socket.id} ${reas} `)
         socket.broadcast.emit('user-left',
             {
                 id: socket.id,
@@ -145,7 +145,7 @@ io.on('connection', (socket) => {
 
 io.of('/DM').on('connection', (socket) => {
     // console.log(socket.user)
-    console.log(`DEV: DM: ${socket.user.username} connected`);
+    // console.log(`DEV: DM: ${socket.user.username} connected`);
 
     // will be used for notifications, and presence detection
     socket.join(`user:${socket.user.username.toString().toLowerCase()}`)
@@ -168,7 +168,7 @@ io.of('/DM').on('connection', (socket) => {
                 chattingWith = null;
             }
             roomID = `dm:${[socket.user.username, username.toString().toLowerCase()].sort().join(':')}`
-            console.log('DEV: roomID: ', roomID)
+            // console.log('DEV: roomID: ', roomID)
             socket.join(roomID);
             chattingWith = {
                 username: username, // the other user
@@ -213,7 +213,7 @@ io.of('/DM').on('connection', (socket) => {
 
 
     socket.on('send-message', async (data) => {
-        console.log('DEV: sending message', roomID, data)
+        // console.log('DEV: sending message', roomID, data)
         if (!roomID)
             return;
         if (typeof data === 'string') {
@@ -223,7 +223,7 @@ io.of('/DM').on('connection', (socket) => {
         const users = io.of('/DM').adapter.rooms.get(roomID)
         // console.log('DEV: ', users);
         const isPresent = users ? users.size : false
-        console.log('DEV: isPresent: ', isPresent)
+        // console.log('DEV: isPresent: ', isPresent)
 
         if (isPresent === false || isPresent == 1 || isPresent == 0) {
             const time = new Date().toLocaleTimeString('en-GB', {

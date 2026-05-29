@@ -29,7 +29,7 @@ exports.addUser = async (req, res) => {
                 email, // hoping validation is done at frontend, will at here later
                 password
             }
-            console.log("DEV: ", userInfo)
+            // console.log("DEV: ", userInfo)
             await userModel.create(userInfo)
             // console.log('data added in database, returning')
             return // to avoid potential overloading (or memory leak, if users expand), by ending running instance of req,res cycle

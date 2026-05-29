@@ -4,7 +4,7 @@ const cloudinary = require('../Utils/cloudinary')
 exports.getAccountInfo = async (req, res) => {
     try {
         if (req.token) {
-            console.log(req.token)
+            // console.log(req.token)
             let user = await userModel.findOne({ username: req.token.username })
             if (!user) return res.status(404).json("User not found")
             userInfo = {
@@ -23,7 +23,7 @@ exports.getAccountInfo = async (req, res) => {
 
 exports.addProfile = async (req, res) => {
     try {
-        console.log("DEV: ", req.file)
+        // console.log("DEV: ", req.file)
         if (req?.file) {
             cloudinary.uploader.upload(req.file.path, async function (err, result) {
                 if (err) {
@@ -41,7 +41,7 @@ exports.addProfile = async (req, res) => {
                 const objectId = req.token._id
                 // console.log(objectId)
                 let dbres = await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url }, { new: true })
-                console.log(dbres)
+                // console.log(dbres)
                 return;
             })
         } else if (req?.body?.profile) {
@@ -61,7 +61,7 @@ exports.addProfile = async (req, res) => {
                 const objectId = req.token._id
                 // console.log(objectId)
                 let dbres = await userModel.findByIdAndUpdate(objectId, { profile: result.secure_url }, { new: true })
-                console.log(dbres)
+                // console.log(dbres)
                 return;
             })
         }
@@ -73,8 +73,8 @@ exports.addProfile = async (req, res) => {
 
 exports.editProfile = async (req, res) => {
     try {
-        console.log("DEV: FILE: ", req?.file)
-        console.log("DEV: BASE64", req?.body?.profile.toString().slice(0, 35))
+        // console.log("DEV: FILE: ", req?.file)
+        // console.log("DEV: BASE64", req?.body?.profile.toString().slice(0, 35))
         // if (req?.file) {
         //     cloudinary.uploader.upload(req.file.path, async function (err, result) {
         //         if (err) {
@@ -221,11 +221,11 @@ exports.searchPhone = async (req, res) => {
             // instructed frontend to make username lowercase before request, but using this as a fallback
             phone = phone.toString().toLowerCase()
             phone = phone.trim().replaceAll(' ', '')
-            console.log(phone)
+            // console.log(phone)
             if (phone.length == 10) {
                 const userInfo = await userModel.findOne({ phone: parseInt(phone) })
                     .select('username email profile phone _id')
-                console.log(userInfo)
+                // console.log(userInfo)
                 if (userInfo) {
                     return res.json(userInfo)
                 } else return res.status(404).json("User not found 1")
@@ -233,7 +233,7 @@ exports.searchPhone = async (req, res) => {
                 phone = phone.replace('+', '')
                 const userInfo = await userModel.findOne({ phone: parseInt(phone) })
                     .select('username email profile phone _id')
-                console.log(userInfo)
+                // console.log(userInfo)
                 if (userInfo) {
                     return res.json(userInfo)
                 } else return res.status(404).json("User not found 2")

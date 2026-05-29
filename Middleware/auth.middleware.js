@@ -3,7 +3,7 @@ const userModel = require('../Model/user.model');
 const mongoose = require('mongoose');
 exports.verify = async (req, res, next) => {
     try {
-        console.log('hitting verify endpoint')
+        // console.log('hitting verify endpoint')
         const authHeader = req?.headers?.authorization;
         const token = authHeader && authHeader.replace(/^Bearer\s+/, '');
         // console.log(token)

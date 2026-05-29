@@ -6,7 +6,7 @@ exports.getUserinfo = async (req, res) => {
         const fetchUser = async (username) => {
             try {
                 const userInfo = await userModel.findOne({ username: username }).select('username email profile phone')
-                console.log("DEV: ", userInfo)
+                // console.log("DEV: ", userInfo)
                 if (userInfo) {
                     return res.status(200).json(userInfo)
                 } else return res.status(404).json("User not found")

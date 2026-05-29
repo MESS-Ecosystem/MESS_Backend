@@ -4,7 +4,7 @@ const Router = express.Router();
 
 let health = (req, res) => {
     try {
-        console.log('DEV: PINGED')
+        // console.log('DEV: PINGED')
         let connectionState = mongoose.connection.readyState;
         let state;
         // using manual switch instead of mongoose's mongoose.STATES[], assuming mroe efficiency
