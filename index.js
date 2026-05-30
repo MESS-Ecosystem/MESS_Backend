@@ -35,8 +35,8 @@ instrument(io, {
 
 database();
 
-server.use(express.urlencoded({ limit: '10mb' }));
-server.use(express.json({ limit: '10mb' }));
+server.use(express.urlencoded({ limit: '100mb' }));
+server.use(express.json({ limit: '100mb' }));
 server.use('/auth', require('./Routes/auth.routes'))
 server.use('/user', require('./Routes/chat.routes'))
 server.use('/account', require('./Routes/account.routes'))

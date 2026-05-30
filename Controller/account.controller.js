@@ -45,7 +45,13 @@ exports.addProfile = async (req, res) => {
                 return;
             })
         } else if (req?.body?.profile) {
-            cloudinary.uploader.upload(req.body.profile, async function (err, result) {
+            console.log("DEV: BASE64IMAGE: Starts with:", req.body.profile.substring(0, 50));
+            console.log("DEV: BASE64IMAGE: Length:", req.body.profile.length);
+            let image = req.body.profile;
+            if (!image.startsWith("data:image")) {
+                image = `data:image/jpeg;base64,${image}`;
+            }
+            cloudinary.uploader.upload(image, async function (err, result) {
                 if (err) {
                     console.error(err)
                     return res.status(500).json({
@@ -162,7 +168,13 @@ exports.editProfile = async (req, res) => {
         else if (req?.body?.profile) {
             const objectId = req.token._id
             const publicId = `users/${objectId}/${req.token.username}`
-            cloudinary.uploader.upload(req?.body?.profile, {
+            console.log("DEV: PATCH: BASE64IMAGE: Starts with:", req.body.profile.substring(0, 50));
+            console.log("DEV: PATCH: BASE64IMAGE: Length:", req.body.profile.length);
+            let image = req.body.profile;
+            if (!image.startsWith("data:image")) {
+                image = `data:image/jpeg;base64,${image}`;
+            }
+            cloudinary.uploader.upload(image, {
                 public_id: publicId,
                 overwrite: true,
                 invalidate: true,
